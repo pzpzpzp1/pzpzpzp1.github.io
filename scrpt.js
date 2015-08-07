@@ -1,4 +1,4 @@
-var script1 = (function iife1() {
+var script1 = (function iife1() { 
 
 	var parity = 1;
 	var clickfunc = function ()
