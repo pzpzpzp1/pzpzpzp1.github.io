@@ -36,7 +36,6 @@ var script1 = (function iife1() {
 
 	function showcookie()
 	{
-		//alert(document.cookie);
 		var elem = document.getElementById("cookies");
 		elem.innerHTML = document.cookie;
 	}
