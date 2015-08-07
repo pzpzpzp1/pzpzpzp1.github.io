@@ -1,9 +1,9 @@
 var script1 = (function iife1() {
 
-	let parity = 1;
-	let clickfunc = function ()
+	var parity = 1;
+	var clickfunc = function ()
 	{
-		let elem = document.getElementById("img1");
+		var elem = document.getElementById("img1");
 		if(parity%2 == 1)
 		{
 			elem.src = "orange.jpg";
@@ -37,16 +37,16 @@ var script1 = (function iife1() {
 	function showcookie()
 	{
 		//alert(document.cookie);
-		let elem = document.getElementById("cookies");
+		var elem = document.getElementById("cookies");
 		elem.innerHTML = document.cookie;
 	}
 
-	function deletecookie()
+	function devarecookie()
 	{
 		var cname = prompt("name");
 		setCookie(cname,"blah",-5);
 	}
 
-	return {clickfunc:clickfunc, writecookie, setCookie, showcookie, deletecookie};
+	return {clickfunc:clickfunc, writecookie, setCookie, showcookie, devarecookie};
 
 }() )
