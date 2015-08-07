@@ -47,6 +47,6 @@ var script1 = (function () {
 		setCookie(cname,"blah",-5);
 	}
 
-	return {clickfunc, writecookie, setCookie, showcookie, deletecookie};
+	return {clickfunc:clickfunc, writecookie, setCookie, showcookie, deletecookie};
 
 }() )
