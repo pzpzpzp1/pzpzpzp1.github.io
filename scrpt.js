@@ -1,6 +1,6 @@
+let script1 = (function iife1() {
+
 let parity = 1;
-
-
 function clickfunc()
 {
 	let elem = document.getElementById("img1");
@@ -46,3 +46,5 @@ function deletecookie()
 	var cname = prompt("name");
 	setCookie(cname,"blah",-5);
 }
+
+}() )
