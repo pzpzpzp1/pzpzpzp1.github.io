@@ -1,32 +1,71 @@
 <!DOCTYPE html>
 
-<html ng-app="angular_name" ng-init="paul='firstname'">
+<html ng-app = "githubviewer">
 	<head>
+		<script data-require="angular.js@*" data-semver="1.3.0-beta.5" 
+            src="https://code.angularjs.org/1.3.0-beta.5/angular.js">
+		</script>
 		<script type="text/javascript" src="angular.js"></script>
 		<script type="text/javascript" src="scrpt.js"></script>
 		
+		<link rel="stylesheet" href="styles.css">
 
 		<title> small thing website </title>
 	</head>
 	<body>
-		<p>Contents</p>
+		<div>
+		  {{ 843 / 42 }}  
+		</div>
+		<div class="container">
+			<h1 class="header">Table of Contents</h1>
+			<ul>
+				<li>cat1</li>
+				<li>cat2</li>
+				<li>cat3</li>
+				<li>cat4</li>
+			</ul>
+			<div class="cat-description">
+				<div>
+					<p>Donut sweet roll toffee tootsie roll cotton candy powder pudding chocolate cake. Halvah muffin sugar plum pastry. Dragée toffee cookie sweet toffee carrot cake carrot cake marshmallow cake. Bear claw wafer candy sesame snaps sesame snaps soufflé sweet marshmallow.</p>
+					<img class="cat-image" src="https://placekitten.com/g/150/150">
+				</div>
+				<div>
+					<p>Muffin chocolate biscuit tiramisu ice cream. Candy candy canes candy apple pie. Oat cake bonbon croissant.</p>
+					<img class="cat-image" src="https://placekitten.com/g/350/350">
+					<a href="https://placekitten.com/"> Source placekitten </a>
+				</div>
+				<p>Marzipan dragée muffin bonbon sugar plum cookie chupa chups caramels soufflé. Sugar plum bonbon candy canes fruitcake gingerbread. Apple pie oat cake dragée cake chupa chups. Chocolate chupa chups pastry sweet halvah macaroon muffin bonbon.</p>
+				<p>Cake dessert marshmallow oat cake. Jujubes powder jelly icing cake. Wafer bear claw pudding topping wafer toffee cake sweet. Bonbon dragée sesame snaps bonbon marshmallow sweet.</p>
+			</div>
+			
+			<div>
+				<p class="test">
+					Contents 
+				</p>
+				
+				<img id="img1" style="width:100px; height:100px;" src="apple.jpg">
+				
+				<p><button type="button"   onclick=script1.writecookie();> Write Cookie!</button></p>
+				<p><button type="button"   onclick=script1.showcookie();> Show Cookies!</button></p>
+				<p><button type="button"   onclick=script1.clickfunc();> Click Me!</button></p>
+				<p><button type="button"   onclick=script1.deletecookie();> Remove Cookie!</button></p>
 
-		<p>
-		{{ 7 / 8 }}
-
-		</p>
-		
-		
-		<!--<p><button type="button"   onclick=script1.writecookie();> Write Cookie!</button></p>
-		<p><button type="button"   onclick=script1.showcookie();> Show Cookies!</button></p>
-		<p><button type="button"   onclick=script1.clickfunc();> Click Me!</button></p>
-		<p><button type="button"   ng-click=script1.clickfunc();> Click Me!</button></p>
-		<p><button type="button"   onclick=script1.deletecookie();> Remove Cookie!</button></p>
-
-		<img id="img1" style="width:100px; height:100px;" src="apple.jpg">
-
-		<p id="cookies"></p>-->
-
-		
+				<p id="cookies"></p>
+			</div>
+			
+			<div ng-controller="MainController">
+				<h1>{{message}}</h1>
+				<img ng-src={{person.img}} title="{{person.fname}} {{person.lname}}">
+				<img ng-src={{user.avatar_url}} title="{{user.login}} {{user.id}}">
+				<div>{{error}}</div>
+			</div>
+			
+			
+		</div>
+		<script>
+			var cat=document.querySelector(".cat-image");
+			console.log(cat);
+		</script>
 	</body>
+	
 </html>

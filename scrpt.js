@@ -32,20 +32,22 @@ var script1 = (function iife1() {
 		d.setTime(d.getTime() + (exdays*24*60*60*1000));
 		var expires = "expires="+d.toUTCString();
 		document.cookie = cname + "=" + cvalue + "; " + expires;
+		alert(document.cookie);
 	} 
 
 	function showcookie()
 	{
+		alert(document.cookie);
 		var elem = document.getElementById("cookies");
 		elem.innerHTML = document.cookie;
 	}
 
-	function devarecookie()
+	function deletecookie()
 	{
 		var cname = prompt("name");
 		setCookie(cname,"blah",-5);
 	}
 
-	return {clickfunc:clickfunc, writecookie, setCookie, showcookie, devarecookie};
+	return {clickfunc:clickfunc, writecookie, setCookie, showcookie, deletecookie};
 
 }() )
