@@ -1,0 +1,27 @@
+.container {
+	width: 960px;
+	margin: 0 auto;
+}
+
+body {
+	background-color: #DCE8E8;
+	background-image: url("Flag_of_Ireland.svg.png");
+	background-repeat: repeat-x;
+}
+
+.cat-image:hover {
+	opacity: 0.3;
+	width: 500px;
+	border-style: solid;
+    border-width: 30px;
+	transition: 2s;
+}
+
+.cat-image {
+	opacity: 1;
+	width: 200px;
+	border-style: dashed;
+    border-width: 15px;
+	border-color: #FF0000;
+	transition: 2s;
+}
