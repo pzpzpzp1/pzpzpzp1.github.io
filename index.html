@@ -54,10 +54,41 @@
 			</div>
 			
 			<div ng-controller="MainController">
-				<h1>{{message}}</h1>
+			
+				<form name = "searchUser" ng-submit="search()">
+					<p>{{ username }}</p>
+					<input type="search" placeholder="Username to find" ng-model="username" />
+					<input type="submit" Value="SSearch">
+				</form>
+				
+				<h1>{{countDown}}</h1>
+
 				<img ng-src={{person.img}} title="{{person.fname}} {{person.lname}}">
 				<img ng-src={{user.avatar_url}} title="{{user.login}} {{user.id}}">
 				<div>{{error}}</div>
+
+				<table>
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th>Stars</th>
+							<th>Language</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr ng-repeat="repo in repos | orderBy:'stargazers_count'">
+							<td>{{repo.name}}</td>
+							<td>{{repo.stargazers_count | number:12}}</td>
+							<td>{{repo.language}}</td>
+							
+						</tr>
+					</tbody>
+
+				</table>
+				
+				
+				
+				
 			</div>
 			
 			
