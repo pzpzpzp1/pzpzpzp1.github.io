@@ -1,0 +1,158 @@
+/* The render's own font, carried over so the glyphs are the ones in the video and
+   not an approximation of them. Subset to the 58 it actually uses. */
+@font-face {
+  font-family: 'MenloRender';
+  src: url('font1.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;   /* never swap in a fallback: a wrong glyph is the one bug
+                            this page exists to avoid */
+}
+
+:root {
+  --bg: #0e1013;
+  --panel: #14171c;
+  --line: #262d38;
+  --text: #e6e9ee;
+  --dim: #8b95a5;
+  --accent: #ffb454;
+  --ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+
+header { flex: none; }
+h1 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .01em; }
+.sub { margin: 3px 0 0; font-size: 12px; color: var(--dim); font-family: var(--mono); }
+
+main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Room around the box for the part of the render that falls outside the crop. */
+.stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 26px;
+}
+
+/* 4:3, the shape of the output video, and the only fixed thing on screen. */
+.frame {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  height: 100%;
+  max-width: 100%;
+  background: #fff;
+}
+
+#art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* The whole point: the padding the renderer cropped away still draws, outside
+     the box, instead of being clipped to the viewBox. */
+  overflow: visible;
+}
+
+#art text {
+  font-family: 'MenloRender', monospace;
+  font-size: 12px;              /* viewBox units: one 7x15 cell, as rendered */
+  fill: #000;
+  white-space: pre;             /* runs of spaces are cells, not collapsible gaps */
+}
+
+/* Knocks back everything the render cropped away. It is one path with the crop
+   punched out of it by fill-rule, so the interior is not painted over at all and
+   stays bit-for-bit what the video shows -- dimming by drawing a second, paler copy
+   of the text would have let its antialiased edges blend into the real one. */
+#veil {
+  fill: #000;
+  fill-opacity: var(--veil, .8);
+}
+
+/* Drawn over the art, so overflowing glyphs pass under the line rather than over. */
+.cropbox {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .45);
+  pointer-events: none;
+}
+
+footer {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.transport { display: flex; align-items: center; gap: 8px; }
+
+button {
+  background: #1b2028;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: var(--ui);
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: #222833; }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); color: #1a1206; border-color: var(--accent); font-weight: 600; }
+button.primary:hover:not(:disabled) { filter: brightness(1.07); }
+
+.check { font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 5px; }
+
+#vol, #veilOpacity { width: 90px; accent-color: var(--accent); cursor: pointer; flex: none; }
+#mute.off { color: var(--dim); }
+
+#seek {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.readout {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--mono);
+}
+.readout .big { font-size: 17px; }
+.readout .dim { font-size: 12px; color: var(--dim); }
+.spacer { flex: 1; }
+
+@media (max-width: 700px) {
+  .stage { padding: 14px; }
+  .readout #geom { display: none; }
+}

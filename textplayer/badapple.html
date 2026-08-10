@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bad Apple - ASCII</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e1013'/%3E%3Ctext x='8' y='12' font-family='monospace' font-size='12' fill='%23ffb454' text-anchor='middle'%3E%24%3C/text%3E%3C/svg%3E">
+<!-- Versioned so a stale copy in someone's cache cannot be reused after a change.
+     serve.py sends no-store, but a browser that cached these before it existed will
+     not ask again on its own. -->
+<link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+
+<header>
+  <h1>Bad Apple - ASCII</h1>
+  <p class="sub" id="sub">loading&hellip;</p>
+</header>
+
+<main>
+  <!-- The box is fixed on screen and its interior is exactly the video frame: the
+       svg's viewBox is set to the crop rectangle, so the same region fills it no
+       matter what the frame's scale is. Nothing is cropped -- the padding the
+       renderer cut off is still drawn, and simply falls outside the box. -->
+  <div class="stage">
+    <div class="frame" id="frame">
+      <svg id="art" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="cropbox"></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="transport">
+    <button id="play" class="primary" disabled>Play</button>
+    <button id="back" disabled>&laquo; 1</button>
+    <button id="fwd" disabled>1 &raquo;</button>
+    <label class="check"><input type="checkbox" id="loop" checked> loop</label>
+    <span class="spacer"></span>
+    <label class="check" for="veilOpacity">veil</label>
+    <input id="veilOpacity" type="range" min="0" max="1" step="0.01" value="0.8"
+           aria-label="Veil opacity">
+    <button id="mute" title="Mute (m)">Vol</button>
+    <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"
+           aria-label="Volume">
+  </div>
+
+  <!-- The music doubles as the clock: frames are read off its currentTime, so a
+       long play cannot drift against it. -->
+  <audio id="snd" preload="auto"></audio>
+
+  <input id="seek" type="range" min="0" max="0" value="0" step="1" disabled
+         aria-label="Seek">
+
+  <div class="readout">
+    <span class="big" id="frameNum">0</span>
+    <span class="dim" id="time"></span>
+    <span class="spacer"></span>
+    <span class="dim" id="geom"></span>
+  </div>
+</footer>
+
+<script src="app.js?v=3"></script>
+</body>
+</html>

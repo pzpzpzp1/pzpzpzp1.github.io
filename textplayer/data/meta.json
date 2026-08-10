@@ -1,0 +1,22 @@
+{
+  "curve": "curve1",
+  "config": "instanok_ww0.9500_pt200",
+  "cell": [
+    7,
+    15
+  ],
+  "source": "bad_apple.mp4",
+  "source_size": [
+    480,
+    360
+  ],
+  "fps": 30.0,
+  "start_frame": 0,
+  "frames": 6572,
+  "scale_range": [
+    0.402699,
+    2.997372
+  ],
+  "glyphs": " \"$%'(),-./47:;?AILSZ\\^_`bdfgijop~¡¨ª¬°²·º¿÷ƒΓτⁿ∙√⌐⌠⌡─│┐╕╖",
+  "audio": "data/music.m4a"
+}
