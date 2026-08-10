@@ -22,15 +22,15 @@
           </div>
 
           <div class="row pb-4">
-              <div class="col-12">
+              <div class="col-12 project-card">
                   <img src="assets/textplayer.gif" alt="bad apple as text" class="rounded img-fluid mx-auto d-block mb-2">
-                  <h5>Bad Apple, as Text</h5>
+                  <h5>Bad Apple - ASCII</h5>
                   <p class="text-muted">ASCII-ified Bad Apple with a text player. <a href="textplayer/badapple.html">Watch it here</a>.</p>
               </div>
           </div>
 
           <div class="row pb-4">
-              <div class="col-12">
+              <div class="col-12 project-card">
                   <img src="assets/out2.gif" alt="image triangulation" class="rounded img-fluid mb-2">
                   <h5>Image Triangulation</h5>
                   <p class="text-muted">Variational image triangulation algorithm to coarsen and stylize images into triangle mosaics. Try it yourself <a href="https://github.com/pzpzpzp1/ImageTriangulations">here</a>.</p>
@@ -38,7 +38,7 @@
           </div>
 
           <div class="row pb-4">
-              <div class="col-12">
+              <div class="col-12 project-card">
                   <img src="assets/abbgam.png" alt="abbreviation game" class="rounded img-fluid mb-2">
                   <h5>Abbreviation Game</h5>
                   <p class="text-muted">Test how good you are at distinguishing acronyms from different contexts! <a href="game.html">Play the game</a>.</p>
@@ -47,7 +47,7 @@
           </div>
 
           <div class="row pb-4">
-              <div class="col-12">
+              <div class="col-12 project-card">
                   <img src="assets/pies.jpg" alt="pies" class="rounded img-fluid mb-2">
                   <h5>Topological Pies</h5>
                   <p class="text-muted">Standard pie weaves don't taste as good. Topological entities carry more flavor.</p>
@@ -55,7 +55,7 @@
           </div>
 
           <div class="row pb-4">
-              <div class="col-12">
+              <div class="col-12 project-card">
                   <img src="assets/hestu1.jpg" alt="Hestu" class="rounded img-fluid mb-2">
                   <h5>Digital Sculpting - Hestu</h5>
                   <p class="text-muted">I made the same blender donut we all did, then went and made Hestu!</p>
@@ -63,7 +63,7 @@
           </div>
 
           <div class="row pb-4">
-              <div class="col-12">
+              <div class="col-12 project-card">
                   <img src="assets/hestu2.png" alt="Hestu" class="rounded img-fluid mb-2">
                   <h5>Make it dance!</h5>
                   <p class="text-muted">You can see stretching artifacts of bad topology and skinning weights. Sadly I'm not a pro animator.</p>
@@ -71,20 +71,13 @@
           </div>
 
           <div class="row pb-4">
-            <div class="col-12">
-                <div style="display: flex; gap: 10px; margin-bottom: 1rem; align-items: flex-start;">
-                    <div style="flex: 1; text-align: center;">
-                        <img src="assets/dino.gif" alt="pcube1" class="rounded" style="height: 200px;">
-                    </div>
-                    <div style="flex: 1; text-align: center;">
-                        <img src="assets/moomoo.gif" alt="pcube2" class="rounded" style="height: 200px;">
-                    </div>
-                    <div style="flex: 1; text-align: center;">
-                        <img src="assets/dodecadino.gif" alt="pcube3" class="rounded" style="height: 200px;">
-                    </div>
-                    <div style="flex: 1; text-align: center;">
-                        <img src="assets/spot.gif" alt="pcube4" class="rounded" style="height: 200px;">
-                    </div>
+            <div class="col-12 project-card">
+                <!-- --ar is each gif's width/height; see .flow-strip. -->
+                <div class="flow-strip">
+                    <div style="--ar: 1.504"><img src="assets/dino.gif" alt="pcube1" class="rounded"></div>
+                    <div style="--ar: 0.735"><img src="assets/moomoo.gif" alt="pcube2" class="rounded"></div>
+                    <div style="--ar: 1.569"><img src="assets/dodecadino.gif" alt="pcube3" class="rounded"></div>
+                    <div style="--ar: 1.264"><img src="assets/spot.gif" alt="pcube4" class="rounded"></div>
                 </div>
                 <h5>Platonic Flows!</h5>
                 <p class="text-muted">Deform a mesh into a more platonic form.</p>
