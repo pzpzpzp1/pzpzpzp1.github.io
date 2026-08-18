@@ -106,13 +106,27 @@ h1 { margin: 0; font-size: clamp(24px, 3vw, 33px); line-height: 1.12; font-weigh
   display: block; max-width: 100%; max-height: 100%; width: auto; height: auto;
   transform-origin: center center;
 }
+/* Where the image actually ends. Without it a white image on a white panel has
+   no visible edge, so you cannot tell the picture from its container. */
+.bounds {
+  position: absolute; pointer-events: none; box-sizing: border-box;
+  border: 1px dashed var(--muted); opacity: 0.55;
+}
+
 .zoomtag {
   position: absolute; right: 6px; bottom: 5px;
   font-family: var(--mono); font-size: 10.5px; color: var(--muted);
   background: var(--surface); border: 1px solid var(--line); border-radius: 2px;
   padding: 1px 5px; opacity: 0; transition: opacity 140ms ease; pointer-events: none;
 }
-.stage:hover .zoomtag, .stage.zoomed .zoomtag { opacity: 1; }
+.stage:hover .zoomtag, .stage.zoomed /* Where the image actually ends. Without it a white image on a white panel has
+   no visible edge, so you cannot tell the picture from its container. */
+.bounds {
+  position: absolute; pointer-events: none; box-sizing: border-box;
+  border: 1px dashed var(--muted); opacity: 0.55;
+}
+
+.zoomtag { opacity: 1; }
 
 .controls { display: flex; flex-direction: column; gap: 10px; }
 .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -182,7 +196,7 @@ button:focus-visible, .filebtn:focus-visible, select:focus-visible, input:focus-
   <div class="cols">
     <section class="col">
       <h2><span><span class="n">1</span> &nbsp;what gets scored</span><span id="inDims">&mdash;</span></h2>
-      <div class="stage" id="stIn"><canvas id="cvIn"></canvas><span class="zoomtag" id="zIn">100%</span></div>
+      <div class="stage" id="stIn"><canvas id="cvIn"></canvas><div class="bounds" id="bIn"></div><span class="zoomtag" id="zIn">100%</span></div>
       <div class="controls">
         <div class="row">
           <select id="pick" aria-label="image"></select>
@@ -198,7 +212,7 @@ button:focus-visible, .filebtn:focus-visible, select:focus-visible, input:focus-
 
     <section class="col">
       <h2><span><span class="n">2</span> &nbsp;ascii</span><span id="asciiDims">&mdash;</span></h2>
-      <div class="stage" id="stOut"><canvas id="cvOut"></canvas><span class="zoomtag" id="zOut">100%</span></div>
+      <div class="stage" id="stOut"><canvas id="cvOut"></canvas><div class="bounds" id="bOut"></div><span class="zoomtag" id="zOut">100%</span></div>
       <div class="controls">
         <div class="row">
           <div class="slider" style="flex:1 1 46%">
@@ -589,6 +603,7 @@ function recompute() {
   renderAscii(+el('alpha').value);
   el('stMs').textContent = Math.round(performance.now() - t0) + ' ms';
   el('busy').textContent = '';
+  refreshZooms();
 }
 
 // Both sliders update live. Work is coalesced into the next frame, so dragging
@@ -633,15 +648,45 @@ function syncCharsetUI() {
 // ---- zoom and pan, per panel ----
 // At rest the canvas is CSS-fitted inside its box, so scale 1 always shows the
 // whole image; zoom multiplies from there and keeps the point under the cursor.
-function attachZoom(stageId, canvas, tagId) {
-  const stage = el(stageId), tag = el(tagId);
+function attachZoom(stageId, canvas, tagId, boundsId) {
+  const stage = el(stageId), tag = el(tagId), bounds = el(boundsId);
   const view = { k: 1, x: 0, y: 0 };
 
+  // The size the canvas occupies at scale 1. Derived from the box and the
+  // canvas's own pixel dimensions rather than read from clientWidth, because
+  // that is rounded to whole pixels and the zoom multiplies the error -- at 15x
+  // a half-pixel of rounding became several pixels of slack in the pan clamp.
+  function fitted() {
+    const bw = stage.clientWidth, bh = stage.clientHeight;
+    const f = Math.min(1, bw / canvas.width, bh / canvas.height);
+    return { w: canvas.width * f, h: canvas.height * f, bw, bh };
+  }
+
+  // Pan is limited so an image edge can never come inside the box edge: at most
+  // you can bring either edge flush. On an axis where the image is smaller than
+  // the box (a tall picture in a wide panel) there is nothing to pan, so it
+  // stays centred.
+  function clamp() {
+    const f = fitted();
+    const mx = Math.max(0, (f.w * view.k - f.bw) / 2);
+    const my = Math.max(0, (f.h * view.k - f.bh) / 2);
+    view.x = Math.min(mx, Math.max(-mx, view.x));
+    view.y = Math.min(my, Math.max(-my, view.y));
+  }
+
   function apply() {
+    clamp();
     canvas.style.transform =
       'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.k + ')';
     tag.textContent = Math.round(view.k * 100) + '%';
     stage.classList.toggle('zoomed', view.k !== 1 || view.x !== 0 || view.y !== 0);
+
+    const f = fitted();
+    const w = f.w * view.k, h = f.h * view.k;
+    bounds.style.left = (f.bw / 2 + view.x - w / 2) + 'px';
+    bounds.style.top = (f.bh / 2 + view.y - h / 2) + 'px';
+    bounds.style.width = w + 'px';
+    bounds.style.height = h + 'px';
   }
   function reset() { view.k = 1; view.x = 0; view.y = 0; apply(); }
 
@@ -658,7 +703,6 @@ function attachZoom(stageId, canvas, tagId) {
     view.x = cx - ratio * (cx - view.x);
     view.y = cy - ratio * (cy - view.y);
     view.k = k;
-    if (view.k === 1) { view.x = 0; view.y = 0; }
     apply();
   }, { passive: false });
 
@@ -679,8 +723,15 @@ function attachZoom(stageId, canvas, tagId) {
   }
   stage.addEventListener('dblclick', reset);
   apply();
-  return reset;
+  // The canvas is resized on every rescore and the box on every window resize;
+  // both change what a legal pan is, so re-clamp and redraw the outline.
+  const refresh = () => apply();
+  window.addEventListener('resize', refresh);
+  return { reset, refresh };
 }
+
+const zooms = [];
+function refreshZooms() { for (const z of zooms) z.refresh(); }
 
 // ---- wiring ----
 el('alpha').addEventListener('input', () => { syncAlphaUI(); scheduleAlpha(); });
@@ -695,7 +746,7 @@ el('charset').addEventListener('change', () => {
 });
 el('ckEq').addEventListener('change', () => { syncNotes(); recompute(); });
 // Purely a view change: no rescore, because the ASCII never used the colour.
-el('ckGrey').addEventListener('change', () => { syncNotes(); drawInput(); });
+el('ckGrey').addEventListener('change', () => { syncNotes(); drawInput(); refreshZooms(); });
 
 function stamp() {
   return CS.name + '_alpha' + (+el('alpha').value).toFixed(2) + '_c' + el('cols').value;
@@ -748,8 +799,8 @@ el('pick').addEventListener('change', async () => {
   csel.value = Object.keys(GLYPHSETS)[0];
   useCharset(csel.value);
 
-  attachZoom('stIn', cvIn, 'zIn');
-  attachZoom('stOut', cvOut, 'zOut');
+  zooms.push(attachZoom('stIn', cvIn, 'zIn', 'bIn'));
+  zooms.push(attachZoom('stOut', cvOut, 'zOut', 'bOut'));
 
   await ensure(current);
   syncAlphaUI(); syncCharsetUI(); syncNotes(); recompute();
