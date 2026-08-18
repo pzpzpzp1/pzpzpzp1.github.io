@@ -295,9 +295,10 @@ function useCharset(name) {
 
 // ---- state ----
 const el = id => document.getElementById(id);
+// key -> {grey, colour} decoded images. A bundled subject has two assets; an
+// upload has one, used for both, so its greyscale is derived at preprocess time.
 const decoded = new Map();
-let uploadImg = null;
-let usingUpload = false;
+let uploadCount = 0;
 let current = IMAGES[0].name;
 let cache = null;
 let pendingScale = false, pendingAlpha = false;
@@ -316,15 +317,16 @@ function loadImage(src) {
 
 function meta(name) { return IMAGES.find(i => i.name === name); }
 
-// Two assets per subject: `grey` is lossless and is the only one ever scored,
-// `colour` is compressed and exists purely to be looked at.
-async function ensure(name) {
-  if (!decoded.has(name)) {
-    const m = meta(name);
+// Two assets per bundled subject: `grey` is lossless and is the only one ever
+// scored, `colour` is compressed and exists purely to be looked at. Uploads are
+// already in the map by the time they can be selected.
+async function ensure(key) {
+  if (!decoded.has(key)) {
+    const m = meta(key);
     const [grey, colour] = await Promise.all([loadImage(m.grey), loadImage(m.colour)]);
-    decoded.set(name, { grey, colour });
+    decoded.set(key, { grey, colour });
   }
-  return decoded.get(name);
+  return decoded.get(key);
 }
 
 // Histogram equalization: one cumulative 256-entry lookup table, no spatial part.
@@ -367,13 +369,8 @@ function percentileNonSat(hist, q) {
 }
 
 // The ASCII is always built from this one, whatever the greyscale checkbox says.
-function scoredSource() {
-  return usingUpload ? uploadImg : decoded.get(current).grey;
-}
-
-function colourSource() {
-  return usingUpload ? uploadImg : decoded.get(current).colour;
-}
+function scoredSource() { return decoded.get(current).grey; }
+function colourSource() { return decoded.get(current).colour; }
 
 // resize, centre-crop to whole cells, greyscale, then equalize
 function preprocess(cols) {
@@ -785,24 +782,47 @@ el('dlTxt').addEventListener('click', () => {
 el('file').addEventListener('change', async (e) => {
   const f = e.target.files && e.target.files[0];
   if (!f) return;
-  uploadImg = await loadImage(URL.createObjectURL(f));
-  usingUpload = true;
+  // A key of its own, so uploading two files with the same name keeps both.
+  const key = 'upload:' + (++uploadCount) + ':' + f.name;
+  const img = await loadImage(URL.createObjectURL(f));
+  // One asset for both roles: the greyscale that gets scored is derived from it
+  // in preprocess, exactly as it is for a bundled subject.
+  decoded.set(key, { grey: img, colour: img });
+
+  let group = el('uploadGroup');
+  if (!group) {
+    group = document.createElement('optgroup');
+    group.id = 'uploadGroup';
+    group.label = 'uploaded';
+    el('pick').appendChild(group);
+  }
+  const o = document.createElement('option');
+  o.value = key;
+  o.textContent = f.name;
+  group.appendChild(o);
+
+  current = key;
+  el('pick').value = key;
+  // Let the same file be picked again later without the input going quiet.
+  e.target.value = '';
   syncNotes(); recompute();
 });
 el('pick').addEventListener('change', async () => {
   current = el('pick').value;
-  usingUpload = false;
   await ensure(current);
   syncNotes(); recompute();
 });
 
 (async function init() {
   const sel = el('pick');
+  const samples = document.createElement('optgroup');
+  samples.label = 'samples';
   for (const im of IMAGES) {
     const o = document.createElement('option');
     o.value = im.name; o.textContent = im.name;
-    sel.appendChild(o);
+    samples.appendChild(o);
   }
+  sel.appendChild(samples);
   sel.value = current;
   el('lblCols').textContent = el('cols').value;
 
