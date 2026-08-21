@@ -190,6 +190,7 @@ button:focus-visible, .filebtn:focus-visible, select:focus-visible, input:focus-
         </div>
         <div class="row">
           <label class="ck" id="lbEq"><input type="checkbox" id="ckEq" checked> equalize</label>
+          <label class="ck" id="lbInv"><input type="checkbox" id="ckInv"> invert</label>
           <label class="ck" id="lbGrey"><input type="checkbox" id="ckGrey" checked> greyscale</label>
         </div>
         <p class="note" id="inNote"></p>
@@ -399,8 +400,17 @@ function preprocess(cols) {
   }
   if (el('ckEq').checked) {
     const lut = equalizeLUT(hist);
+    for (let i = 0; i < grey.length; i++) grey[i] = lut[grey[i]];
+  }
+  // Invert last, so equalization still works on the image's own tones rather
+  // than on a flipped copy of them. Ink and paper swap: what was bright is now
+  // what the glyphs are drawn over.
+  if (el('ckInv').checked) {
+    for (let i = 0; i < grey.length; i++) grey[i] = 255 - grey[i];
+  }
+  if (el('ckEq').checked || el('ckInv').checked) {
     hist.fill(0);
-    for (let i = 0; i < grey.length; i++) { grey[i] = lut[grey[i]]; hist[grey[i]]++; }
+    for (let i = 0; i < grey.length; i++) hist[grey[i]]++;
   }
   return { grey, w: cropW, h: cropH, gw, gh, hist,
            geom: { nw, nh, left, top } };
@@ -417,6 +427,15 @@ function drawColour(canvas, pre) {
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(im, 0, 0, im.naturalWidth, im.naturalHeight,
                 -left, -top, nw, nh);
+  if (el('ckInv').checked) {
+    const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    for (let p = 0; p < d.data.length; p += 4) {
+      d.data[p] = 255 - d.data[p];
+      d.data[p + 1] = 255 - d.data[p + 1];
+      d.data[p + 2] = 255 - d.data[p + 2];
+    }
+    ctx.putImageData(d, 0, 0);
+  }
 }
 
 function drawGrey(canvas, grey, w, h) {
@@ -621,10 +640,12 @@ function setAlpha(a) {
 }
 
 function syncNotes() {
-  const eq = el('ckEq').checked, grey = el('ckGrey').checked;
+  const eq = el('ckEq').checked, grey = el('ckGrey').checked, inv = el('ckInv').checked;
   el('lbEq').classList.toggle('off', !eq);
+  el('lbInv').classList.toggle('off', !inv);
   el('lbGrey').classList.toggle('off', !grey);
-  const scored = eq ? 'the equalized greyscale' : 'the plain greyscale';
+  const scored = (eq ? 'the equalized' : 'the plain')
+    + (inv ? ' inverted greyscale' : ' greyscale');
   el('inNote').textContent = grey
     ? 'Showing ' + scored + ', which is exactly what the ASCII is built from. '
       + 'Scroll to zoom, drag to pan, double-click to reset.'
@@ -759,6 +780,7 @@ el('charset').addEventListener('change', () => {
   recompute();
 });
 el('ckEq').addEventListener('change', () => { syncNotes(); recompute(); });
+el('ckInv').addEventListener('change', () => { syncNotes(); recompute(); });
 // Purely a view change: no rescore, because the ASCII never used the colour.
 el('ckGrey').addEventListener('change', () => { syncNotes(); drawInput(); refreshZooms(); });
 
