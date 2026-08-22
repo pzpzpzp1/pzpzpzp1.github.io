@@ -133,10 +133,6 @@ label.ck.off { color: var(--muted); }
 .slider .head { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .slider .head b { color: var(--ink); font-variant-numeric: tabular-nums; }
 input[type=range] { width: 100%; accent-color: var(--accent); }
-input[type=number] {
-  font-family: var(--mono); font-size: 12.5px; padding: 5px 8px; width: 5.5em;
-  border: 1px solid var(--line); border-radius: 2px; background: transparent; color: var(--ink);
-}
 
 select {
   font-family: var(--mono); font-size: 12.5px; padding: 6px 10px;
@@ -213,8 +209,8 @@ button:focus-visible, .filebtn:focus-visible, select:focus-visible, input:focus-
         </div>
         <div class="slider">
           <div class="head"><span>tile &mdash; SSIM window in cells</span><b id="lblTile">2 x 2</b></div>
-          <input type="number" id="tile" min="1" max="8" step="1" value="2"
-                 inputmode="numeric" aria-label="SSIM window size in cells">
+          <input type="range" id="tile" min="1" max="8" step="1" value="2"
+                 aria-label="SSIM window size in cells">
         </div>
         <div class="slider">
           <div class="head"><span>scale &mdash; character columns</span><b id="lblCols">150</b></div>
@@ -826,7 +822,7 @@ el('charset').addEventListener('change', () => {
 });
 el('ckEq').addEventListener('change', () => { syncNotes(); recompute(); });
 el('ckInv').addEventListener('change', () => { syncNotes(); recompute(); });
-el('tile').addEventListener('change', () => { syncTileUI(); recompute(); });
+el('tile').addEventListener('input', () => { syncTileUI(); scheduleScale(); });
 // Purely a view change: no rescore, because the ASCII never used the colour.
 el('ckGrey').addEventListener('change', () => { syncNotes(); drawInput(); refreshZooms(); });
 
