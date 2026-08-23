@@ -208,13 +208,13 @@ button:focus-visible, .filebtn:focus-visible, select:focus-visible, input:focus-
           </div>
         </div>
         <div class="slider">
-          <div class="head"><span>tile &mdash; SSIM window in cells</span><b id="lblTile">2 x 2</b></div>
-          <input type="range" id="tile" min="1" max="8" step="1" value="2"
+          <div class="head"><span>tile &mdash; joint glyph search</span><b id="lblTile">2 x 2 cells, exhaustive</b></div>
+          <input type="range" id="tile" min="1" max="2" step="1" value="2"
                  aria-label="SSIM window size in cells">
         </div>
         <div class="slider">
-          <div class="head"><span>scale &mdash; character columns</span><b id="lblCols">150</b></div>
-          <input type="range" id="cols" min="40" max="200" step="2" value="150">
+          <div class="head"><span>scale &mdash; character columns</span><b id="lblCols">20</b></div>
+          <input type="range" id="cols" min="12" max="200" step="2" value="20">
         </div>
         <div class="slider">
           <div class="head"><span>alpha &mdash; silhouette weight</span><b id="lblAlpha">0.70</b></div>
@@ -294,9 +294,15 @@ function useCharset(name) {
   let blank = -1;
   for (let j = 0; j < n; j++) if (ink[j] === 0 && mu[j] === 0) blank = j;
 
+  const sg = new Float64Array(n), sg2 = new Float64Array(n);
+  for (let j = 0; j < n; j++) {
+    let a = 0, b = 0;
+    for (let p = 0; p < npx; p++) { const v = grey[j * npx + p]; a += v; b += v * v; }
+    sg[j] = a; sg2[j] = b;
+  }
   const packed = packBits(bin, n, npx);
   CS = { name, chars, n, cw: G.cw, ch: G.ch, npx, grey, mu, vari, ink, t, blank,
-         binWords: packed.words, nWords: packed.nWords };
+         sg, sg2, binWords: packed.words, nWords: packed.nWords };
 }
 
 // ---- state ----
@@ -454,14 +460,12 @@ function drawGrey(canvas, grey, w, h) {
   ctx.putImageData(img, 0, 0);
 }
 
-// Score every cell against every glyph. Both matrices are cached so alpha only
-// re-blends. Three things keep this fast enough to drive from a slider: the
-// silhouette intersection is popcounts on packed bits, empty cells skip scoring
-// altogether, and nothing here allocates per cell.
-function score(pre, tile) {
+// Per-cell terms that do not depend on alpha or on the tile size: the glyph dot
+// products for SSIM, the silhouette accuracy, and the window sums. Everything the
+// searches below need is derived from these.
+function score(pre) {
   const { grey, w, gw, gh, hist } = pre;
-  const { n: NG, npx, cw, ch, grey: GG, mu: gMu, vari: gVar, ink: gInk, t: gT,
-          binWords, nWords, blank } = CS;
+  const { n: NG, npx, cw, ch, grey: GG, ink: gInk, binWords, nWords } = CS;
   const nCells = gw * gh;
   const cut = percentileNonSat(hist, 50);
 
@@ -469,16 +473,18 @@ function score(pre, tile) {
   const cellsBin = new Uint8Array(nCells * npx);
   const cellWords = new Uint32Array(nCells * nWords);
   const empty = new Uint8Array(nCells);
+  const cS1 = new Float64Array(nCells), cS2 = new Float64Array(nCells);
 
   for (let cy = 0; cy < gh; cy++) {
     for (let cx = 0; cx < gw; cx++) {
       const i = cy * gw + cx, base = i * npx, wbase = i * nWords;
-      let anyInk = 0;
+      let anyInk = 0, s1 = 0, s2 = 0;
       for (let y = 0; y < ch; y++) {
         const row = (cy * ch + y) * w + cx * cw;
         for (let x = 0; x < cw; x++) {
           const p = y * cw + x, v = grey[row + x], ink = 255 - v;
           cells[base + p] = ink;
+          s1 += ink; s2 += ink * ink;
           if (ink) anyInk = 1;
           if (v < cut) {
             cellsBin[base + p] = 1;
@@ -487,97 +493,152 @@ function score(pre, tile) {
         }
       }
       empty[i] = anyInk ? 0 : 1;
+      cS1[i] = s1; cS2[i] = s2;
     }
   }
 
-  // Window sums for the SSIM half. The window is `tile` x `tile` cells centred on
-  // the target cell where it can be, shifted inward at the edges so N never
-  // changes. Sums come from integral images, so a window costs four lookups
-  // however large it is.
-  const k = Math.max(1, Math.min(tile | 0, Math.min(gw, gh)));
-  const N = k * k * npx, N1 = N - 1;
-  const iw = w + 1, ih = pre.h + 1;
-  const I1 = new Float64Array(iw * ih), I2 = new Float64Array(iw * ih);
-  for (let y = 0; y < pre.h; y++) {
-    let r1 = 0, r2 = 0;
-    for (let x = 0; x < w; x++) {
-      const v = 255 - grey[y * w + x];
-      r1 += v; r2 += v * v;
-      I1[(y + 1) * iw + (x + 1)] = I1[y * iw + (x + 1)] + r1;
-      I2[(y + 1) * iw + (x + 1)] = I2[y * iw + (x + 1)] + r2;
-    }
-  }
-  const box = (I, x0, y0, x1, y1) =>
-    I[y1 * iw + x1] - I[y0 * iw + x1] - I[y1 * iw + x0] + I[y0 * iw + x0];
-
-  const ssim = new Float32Array(nCells * NG);
+  // dot(cell, glyph) for SSIM, and the silhouette accuracy, per cell per glyph
+  const dot = new Float32Array(nCells * NG);
   const acc = new Float32Array(nCells * NG);
-  const n1 = npx - 1;
-  let scored = 0;
-
   for (let i = 0; i < nCells; i++) {
-    const base = i * NG;
-    if (k === 1 && empty[i] && blank >= 0) {
-      // Only sound for a 1x1 window: with context, a blank cell's window is not
-      // blank, so space is no longer provably the winner.
-      ssim[base + blank] = 1; acc[base + blank] = 1;
-      continue;
-    }
-    scored++;
-    const cb = i * npx, wb = i * nWords;
-    const cx = i % gw, cy = (i - cx) / gw;
-    // window origin: centred on the cell, shifted in at the edges so it stays k x k
-    const ox = Math.min(Math.max(cx - ((k - 1) >> 1), 0), Math.max(0, gw - k));
-    const oy = Math.min(Math.max(cy - ((k - 1) >> 1), 0), Math.max(0, gh - k));
-    const x0 = ox * cw, y0 = oy * ch, x1 = x0 + k * cw, y1 = y0 + k * ch;
-    const S1 = box(I1, x0, y0, x1, y1), S2 = box(I2, x0, y0, x1, y1);
-    let sp = 0, sp2 = 0;
-    for (let p = 0; p < npx; p++) { const v = cells[cb + p]; sp += v; sp2 += v * v; }
-    const sq = S1 - sp, sq2 = S2 - sp2;
-    const mu = S1 / N;                       // window mean of the source
-    const vr = (S2 - N * mu * mu) / N1;      // window variance of the source
-    const mu2 = mu * mu;
+    const cb = i * npx, wb = i * nWords, base = i * NG;
     const w0 = cellWords[wb], w1 = cellWords[wb + 1],
           w2 = cellWords[wb + 2], w3 = cellWords[wb + 3];
-
     for (let j = 0; j < NG; j++) {
       const gb = j * npx;
-      let dot = 0;
-      for (let p = 0; p < npx; p++) dot += cells[cb + p] * GG[gb + p];
+      let d = 0;
+      for (let p = 0; p < npx; p++) d += cells[cb + p] * GG[gb + p];
       const jw = j * nWords;
       const inter = popcount(w0 & binWords[jw]) + popcount(w1 & binWords[jw + 1])
                   + popcount(w2 & binWords[jw + 2]) + popcount(w3 & binWords[jw + 3]);
-      // candidate window = this glyph in its own cell, source pixels elsewhere
-      const muCl = (gT[j] * npx + sq) / N;                 // for the luminance term
-      const muCs = (gMu[j] * npx + sq) / N;                // for the structure term
-      const varC = (gVar[j] * n1 + gMu[j] * gMu[j] * npx + sq2 - N * muCs * muCs) / N1;
-      const cov = (dot + sq2 - N * mu * muCs) / N1;
-      const ld = mu2 + muCl * muCl;
-      const lum = ld > 0 ? (2 * mu * muCl) / ld : 1;
-      const cd = vr + varC;
-      const cs = cd > 0 ? (2 * cov) / cd : 1;
-      ssim[base + j] = cs >= 0 ? Math.pow(lum, 10) * Math.pow(cs, 0.1) : 0;
+      dot[base + j] = d;
       acc[base + j] = 1 - (gInk[j] - inter) / npx;
     }
   }
-  return { ssim, acc, gw, gh, cellsBin, nCells, scored, k };
+  return { dot, acc, cS1, cS2, empty, cellsBin, gw, gh, nCells };
 }
 
-// blend, take the last maximum, draw, and measure
-function renderAscii(alpha) {
-  if (!cache) return;
-  const { ssim, acc, gw, gh, cellsBin, nCells } = cache;
-  const { n: NG, npx, cw, ch, grey: GG, binWords, nWords, chars } = CS;
-  const pick = new Int32Array(nCells);
-  for (let i = 0; i < nCells; i++) {
-    const base = i * NG;
+// SSIM of one cell against one glyph -- the k=1 case, unchanged.
+function ssimCell(c, i, j) {
+  const { npx, mu: gMu, vari: gVar, t: gT } = CS;
+  const n1 = npx - 1;
+  const muX = c.cS1[i] / npx;
+  const varX = (c.cS2[i] - npx * muX * muX) / n1;
+  const cov = (c.dot[i * CS.n + j] - npx * muX * gMu[j]) / n1;
+  const ld = muX * muX + gT[j] * gT[j];
+  const lum = ld > 0 ? (2 * muX * gT[j]) / ld : 1;
+  const cd = varX + gVar[j];
+  const cs = cd > 0 ? (2 * cov) / cd : 1;
+  if (cs < 0) return 0;
+  const L2 = lum * lum, L4 = L2 * L2, L8 = L4 * L4;
+  return L8 * L2 * Math.pow(cs, 0.1);
+}
+
+// k=1: every cell decided on its own, all NG glyphs tried. Fast enough that alpha
+// stays interactive.
+function solveCells(c, alpha) {
+  const NG = CS.n, pick = new Int32Array(c.nCells);
+  for (let i = 0; i < c.nCells; i++) {
     let best = -Infinity, bj = 0;
     for (let j = 0; j < NG; j++) {
-      const v = alpha * acc[base + j] + (1 - alpha) * ssim[base + j];
+      const v = alpha * c.acc[i * NG + j] + (1 - alpha) * ssimCell(c, i, j);
       if (v >= best) { best = v; bj = j; }
     }
     pick[i] = bj;
   }
+  return pick;
+}
+
+// One k x k tile, solved exhaustively over every combination of its cells'
+// glyphs. The tile objective depends on the chosen glyphs only through four sums,
+// so a combination costs a handful of flops; a branch-and-bound cut on the
+// silhouette half (SSIM can never exceed 1) removes about two thirds of the work
+// without changing the answer.
+function solveTile(c, idx, alpha) {
+  const NG = CS.n, npx = CS.npx;
+  const { mu: gMu, t: gT, sg, sg2 } = CS;
+  const m = idx.length;
+  const N = m * npx, N1 = N - 1;
+  let S1 = 0, S2 = 0;
+  for (const i of idx) { S1 += c.cS1[i]; S2 += c.cS2[i]; }
+  const muX = S1 / N, varX = (S2 - N * muX * muX) / N1, muX2 = muX * muX;
+  const w = alpha / m, sw = 1 - alpha;
+
+  // suffix maxima of the accuracy term, for the bound
+  const suf = new Float64Array(m + 1);
+  for (let d = m - 1; d >= 0; d--) {
+    let mx = -Infinity, b = idx[d] * NG;
+    for (let j = 0; j < NG; j++) if (c.acc[b + j] > mx) mx = c.acc[b + j];
+    suf[d] = mx + suf[d + 1];
+  }
+
+  const chosen = new Int32Array(m), best = new Int32Array(m);
+  let bestV = -Infinity;
+
+  // iterative depth-first walk, so any m (1, 2 or 4) works
+  const A = new Float64Array(m + 1), B = new Float64Array(m + 1),
+        C = new Float64Array(m + 1), T = new Float64Array(m + 1),
+        K = new Float64Array(m + 1);
+  let d = 0;
+  const j = new Int32Array(m).fill(-1);
+  while (d >= 0) {
+    j[d]++;
+    if (j[d] >= NG) { d--; continue; }
+    const g = j[d], b = idx[d] * NG;
+    const kk = K[d] + c.acc[b + g];
+    if (w * (kk + suf[d + 1]) + sw <= bestV) continue;      // bound
+    A[d + 1] = A[d] + c.dot[b + g];
+    B[d + 1] = B[d] + sg[g];
+    C[d + 1] = C[d] + sg2[g];
+    T[d + 1] = T[d] + gT[g] * npx;
+    K[d + 1] = kk;
+    chosen[d] = g;
+    if (d === m - 1) {
+      const muYs = B[m] / N, muYl = T[m] / N;
+      const varY = (C[m] - N * muYs * muYs) / N1;
+      const cov = (A[m] - N * muX * muYs) / N1;
+      const ld = muX2 + muYl * muYl;
+      const L = ld > 0 ? 2 * muX * muYl / ld : 1;
+      const cd = varX + varY;
+      const cs = cd > 0 ? 2 * cov / cd : 1;
+      let ssim = 0;
+      if (cs >= 0) {
+        const L2 = L * L, L4 = L2 * L2, L8 = L4 * L4;
+        ssim = L8 * L2 * Math.pow(cs, 0.1);
+      }
+      const v = w * K[m] + sw * ssim;
+      if (v > bestV) { bestV = v; best.set(chosen); }
+    } else {
+      d++; j[d] = -1;
+    }
+  }
+  return best;
+}
+
+// Walk the grid in k x k tiles. A tile with no ink anywhere is filled with the
+// blank glyph instead of being searched -- its answer is not in doubt and it is
+// most of the background.
+function tileList(c, k) {
+  const out = [];
+  for (let ty = 0; ty < c.gh; ty += k) {
+    for (let tx = 0; tx < c.gw; tx += k) {
+      const idx = [];
+      for (let dy = 0; dy < k && ty + dy < c.gh; dy++) {
+        for (let dx = 0; dx < k && tx + dx < c.gw; dx++) {
+          idx.push((ty + dy) * c.gw + tx + dx);
+        }
+      }
+      out.push(idx);
+    }
+  }
+  return out;
+}
+
+// blend, take the last maximum, draw, and measure
+function drawPicks(pick) {
+  if (!cache) return;
+  const { gw, gh, cellsBin, nCells } = cache;
+  const { npx, cw, ch, grey: GG, binWords, nWords, chars } = CS;
 
   const w = gw * cw, h = gh * ch;
   cvOut.width = w; cvOut.height = h;
@@ -629,19 +690,62 @@ function drawInput() {
   else drawColour(cvIn, lastPre);
 }
 
+let runId = 0;
+
+// k=1 finishes in milliseconds. k=2 searches every combination of four glyphs per
+// tile, which takes seconds to minutes, so it runs in chunks: the page stays
+// responsive, progress is reported, and starting another run cancels this one.
+async function solveAndDraw(alpha, k) {
+  const mine = ++runId;
+  if (k === 1) {
+    drawPicks(solveCells(cache, alpha));
+    el('busy').textContent = '';
+    return;
+  }
+  const tiles = tileList(cache, k);
+  const pick = new Int32Array(cache.nCells);
+  const blankGlyph = CS.blank >= 0 ? CS.blank : 0;
+  let searched = 0, skipped = 0;
+  const t0 = performance.now();
+  for (let n = 0; n < tiles.length; n++) {
+    const idx = tiles[n];
+    let allWhite = true;
+    for (const i of idx) if (!cache.empty[i]) { allWhite = false; break; }
+    if (allWhite) {
+      for (const i of idx) pick[i] = blankGlyph;      // no ink: the answer is blank
+      skipped++;
+    } else {
+      const best = solveTile(cache, idx, alpha);
+      for (let d = 0; d < idx.length; d++) pick[idx[d]] = best[d];
+      searched++;
+    }
+    if ((n & 3) === 3 || n === tiles.length - 1) {
+      el('busy').textContent = 'searching tile ' + (n + 1) + '/' + tiles.length
+        + '  (' + skipped + ' blank)';
+      drawPicks(pick);
+      await new Promise(r => setTimeout(r, 0));
+      if (mine !== runId) return;                     // a newer run took over
+    }
+  }
+  drawPicks(pick);
+  el('stMs').textContent = Math.round(performance.now() - t0) + ' ms';
+  el('busy').textContent = searched + ' tiles searched, ' + skipped + ' blank';
+}
+
 function recompute() {
   const cols = +el('cols').value;
+  const k = Math.max(1, Math.min(2, el('tile').value | 0));
   const t0 = performance.now();
   const pre = preprocess(cols);
   if (!pre) { el('busy').textContent = 'image too small'; return; }
   lastPre = pre;
   drawInput();
   el('inDims').textContent = pre.w + '×' + pre.h;
-  cache = score(pre, +el('tile').value);
-  renderAscii(+el('alpha').value);
+  cache = score(pre);
   el('stMs').textContent = Math.round(performance.now() - t0) + ' ms';
-  el('busy').textContent = '';
+  el('busy').textContent = k === 1 ? '' : 'searching…';
   refreshZooms();
+  solveAndDraw(+el('alpha').value, k);
 }
 
 // Both sliders update live. Work is coalesced into the next frame, so dragging
@@ -654,7 +758,11 @@ function scheduleScale() {
 function scheduleAlpha() {
   if (pendingAlpha) return;
   pendingAlpha = true;
-  requestAnimationFrame(() => { pendingAlpha = false; renderAscii(+el('alpha').value); });
+  requestAnimationFrame(() => {
+    pendingAlpha = false;
+    // The winning combination depends on alpha, so at k=2 this restarts the search.
+    solveAndDraw(+el('alpha').value, Math.max(1, Math.min(2, el('tile').value | 0)));
+  });
 }
 
 function syncAlphaUI() {
@@ -690,8 +798,10 @@ function syncNotes() {
 }
 
 function syncTileUI() {
-  const k = Math.max(1, Math.min(8, el('tile').value | 0));
-  el('lblTile').textContent = k + ' x ' + k;
+  const k = Math.max(1, Math.min(2, el('tile').value | 0));
+  el('lblTile').textContent = k === 1
+    ? '1 x 1 cell, instant'
+    : '2 x 2 cells, exhaustive';
 }
 
 function syncCharsetUI() {
