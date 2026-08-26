@@ -330,7 +330,7 @@ figcaption.sm {
       </p>
       <p> 
       To motivate the additional scoring term, note that human vision is remarkably good at
-      <b>filling in</b> what's missing. Gaps in the contour can be closed by the human brain. This is the phenomenon responsible for all sorts of visual illusions. See: https://en.wikipedia.org/wiki/Illusory_contour. 
+      <b>filling in</b> what's missing. Gaps in the contour can be closed by the human brain. This is the phenomenon responsible for all sorts of visual illusions. See: <a href="https://en.wikipedia.org/wiki/Illusory_contour">illusory contours</a>.
       On the other hand, it's much harder to <em>unsee</em>
       structure that is there. A stray character in the margin is therefore far worse
       than choosing a character that covers less than it could. So if we want to perceive clean boundaries, we should bias the scoring towards white <b>white</b>. Mathematically, this is expressed by the equation
@@ -1030,14 +1030,24 @@ function attachWipe(stageId, canvasId, tagId, boundsId, lineId) {
   const zoom = attachZoom(stageId, canvas, tagId, boundsId, true);
   let imgs = null, frac = 0.5;
 
-  // The second image sets the canvas size; the first is drawn stretched to it.
-  // The pairs here differ by at most a center-crop, so the stretch is slight.
+  // The second image sets the canvas size. The first may be the uncropped
+  // target, and the renders are made by uniformly scaling the target and then
+  // centre-cropping to whole cells -- so it must be overlaid the same way, not
+  // stretched: uniform cover scale, floored to whole pixels, centred crop,
+  // exactly mirroring preprocess. A stretch would shift features against the
+  // render by the cropped margin. When both images already match (the alpha
+  // comparison), this reduces to an identity draw.
   function draw() {
     if (!imgs) return;
     const [a, b] = imgs;
     canvas.width = b.naturalWidth; canvas.height = b.naturalHeight;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(a, 0, 0, canvas.width, canvas.height);
+    const s = Math.max(canvas.width / a.naturalWidth, canvas.height / a.naturalHeight);
+    const nw = Math.floor(a.naturalWidth * s), nh = Math.floor(a.naturalHeight * s);
+    const left = Math.floor((nw - canvas.width) / 2), top = Math.floor((nh - canvas.height) / 2);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(a, -left, -top, nw, nh);
     const sx = Math.round(frac * canvas.width);
     ctx.save();
     ctx.beginPath();
