@@ -1090,7 +1090,7 @@ async function cmpDraw(i) {
   const e = COMPARE[i];
   el('cmpName').textContent = e.name;
   const [target, a0, a15] = await Promise.all(
-    [meta(e.name).colour, e.a0, e.a15].map(cmpLoad));
+    [meta(e.name).grey, e.a0, e.a15].map(cmpLoad));
   cvCmpA.width = target.naturalWidth; cvCmpA.height = target.naturalHeight;
   cvCmpA.getContext('2d').drawImage(target, 0, 0);
   el('stCmpA').style.aspectRatio = target.naturalWidth + ' / ' + target.naturalHeight;
@@ -1132,15 +1132,15 @@ const cmpZooms = [];
   syncAlphaUI(); syncCharsetUI(); syncNotes(); recompute();
 
   // the write-up's gallery reuses the bundled targets and comparison images, so
-  // nothing is embedded twice: each subject is one wipe between its colour
-  // asset and its alpha-0 render
+  // nothing is embedded twice: each subject is one wipe between its greyscale
+  // asset -- the one the ASCII is actually scored against -- and its alpha-0 render
   const galSubjects = ['cabbage', 'laocoon', 'pieta'];
   for (let g = 0; g < galSubjects.length; g++) {
     const name = galSubjects[g];
     const wipe = attachWipe('stGal' + g, 'cvGal' + g, 'zGal' + g, 'bGal' + g, 'wGal' + g);
     const e = COMPARE.find(c => c.name === name);
     if (!e) continue;
-    Promise.all([cmpLoad(meta(name).colour), cmpLoad(e.a0)])
+    Promise.all([cmpLoad(meta(name).grey), cmpLoad(e.a0)])
       .then(([t, a]) => wipe.set(t, a));
   }
 
