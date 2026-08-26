@@ -379,7 +379,7 @@ figcaption.sm {
       no gradient for SSIM to match, and what you care about is that the shape reads and the
       background stays empty. Alpha up to 0.8-0.9 are reasonable.</p>
       
-      <p>Two smaller levers:</p>
+      <p>Two other levers:</p>
       <ul>
         <li><b>Equalize</b> will map the input image through a monotonic illumination transformation so that the distribution of greyscale colors is more uniform "equal". This typically makes both dark and bright regions read more clearly. This is best paired with SSIM based scoring where it produces a good distribution of greyscale tones.</li>
         <li><b>Scale</b> will increase or decrease the size of the target image. Increasing the size, means more ASCII characters will be used in the conversion. Note that since images are not typically clean multiples of 15x7, there is a center-cropping step after scaling. It automatically crops the minimal amount necessary to reach the right multiples of 15x7. This cropping is hardly noticeable for the most part. Scale is a very subjective parameter to use, since if you set it too high, the image can be almost perfectly reproduced but the charm of ASCII art is lost. I typically go for the minimal scale value at which key features of the image still come through as readable.</li>
