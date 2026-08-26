@@ -216,7 +216,7 @@ figcaption.sm {
 
 <div class="wrap">
   <header>
-    <h1>ASCII converter balancing SSIM with trimming loss terms</h1>
+    <h1>ASCII: Balancing Structural Similarity with an Illusory Boundary</h1>
     <div class="eq">
       <span>score&nbsp;=</span>
       <span class="w t-ssim" id="eqSsimW">0.30</span>
@@ -290,9 +290,9 @@ figcaption.sm {
   <div class="prose">
     <section>
       <h2>How it's made</h2>
-      <p> We aim to convert a target image into ascii glyphs. For simplicity, only monospaced fonts are used, meaning every glyph is identically sized. In this case, they are all 15x7 pixels. 
+      <p> Our goal is to convert a target image into ascii glyphs. For simplicity, only monospaced fonts are used, meaning every glyph is identically sized: 15x7 pixels. 
       Based on this paper <a href="https://doi.org/10.1111/cgf.12597">Fast Rendering of Image Mosaics and ASCII
-      Art</a> we use SSIM, a measure of structural similarity in images, to measure how close the ascii rendition is to the target image. This measurement is performed independently per glyph. For each 15x7 patch of the image, we iterate through all glyphs, and select the one with the best similarity score. This similarity scoring approach works well for greyscale images and results in ascii that approximates gradient like features while only using characters. Here are some results using just the SSIM scoring method. </p>
+      Art</a> we use SSIM, a structural similarity score, to measure how close the ascii rendition is to the target image. Maximizing SSIM therefore means the ascii image is close to the target image. For simplicity, glyph selection is performed independently for every 15x7 patch of the image. For each patch, we iterate through all glyphs in the glyphset, usually ~100 characters, and select the one with the best SSIM score. This similarity scoring approach works well for greyscale images and results in ascii that approximates gradient like features. Here's some results using just the SSIM scoring method. </p>
       <div class="gallery">
         <figure><img id="gal0" alt="Michelangelo's David in ASCII">
           <figcaption class="sm">david &middot; alpha 0</figcaption></figure>
@@ -305,13 +305,14 @@ figcaption.sm {
 
     <section>
       <h2>Replacing the fuzz with an illusory boundary</h2>
-      <p>Looking along the foreground-background edges of the target images, we can see undesirable ascii <b>fuzz</b>: characters bleeding into the background. SSIM scoring doesn't handle this kind of complete transition to white background well. The result is that sharp boundaries become fuzzy/noisy. Unfortunately, these are very salient artifacts so we try to address it with an additional scoring term. 
-      
-      To motivate our additional scoring term, we note that human vision is remarkably good at
+      <p>The results look ok, but clearly there are undesirable artifacts. There's ascii <b>fuzz</b>: characters bleeding into the background. SSIM scoring doesn't handle this kind of complete transition to white background well. The result is that sharp boundaries become fuzzy/noisy. Unfortunately, these are very salient to human perception so we try to address it with an additional scoring term. 
+      </p>
+      <p> 
+      To motivate the additional scoring term, note that human vision is remarkably good at
       <b>filling in</b> what's missing. Gaps in the contour can be closed by the human brain. This is the phenomenon responsible for all sorts of visual illusions. See: https://en.wikipedia.org/wiki/Illusory_contour. 
-      On the other hand, it is much harder to <em>unsee</em>
+      On the other hand, it's much harder to <em>unsee</em>
       structure that is there. A stray character in the margin is therefore far worse
-      than choosing a character that covers less than it chould. Our takeaway was that if we want to perceive clean boundaries, we should bias the scoring towards white <b>white</b>. Mathematically, this is expressed by the equation
+      than choosing a character that covers less than it could. So if we want to perceive clean boundaries, we should bias the scoring towards white <b>white</b>. Mathematically, this is expressed by the equation
       <p><code>trimming = 1 &minus; stray ink / N</code></p>
       <p>This penalizes over-painting. Glyphs are told explicitly it's worse to put black pixels where the target image is white. Asymmetrically, it is not as penalized to put white pixels where it should be black. We blend a small amount of this penalty with SSIM scoring depicted by the alpha slider. Even a slight amount of this penalty cleans up the boundary.</p>
       <div class="cmp">
@@ -355,10 +356,9 @@ figcaption.sm {
     <section>
       <h2>Suggested usage</h2>
       <p><b>Lean on SSIM for anything with real greyscale.</b> e.g. photographs, pencil drawings,
-      shaded renders. If the target image is a greyscale foreground image with sharp transition to white background, add a bit of trimming loss: alpha > 0 until the margins look clean. Adding too much alpha will result in too much whitening, resulting in an over-exposed look. For greyscale + background images, somewhere around alpha 0.1 is
-      usually enough, but feel free to play with the over-exposed look. 
+      shaded renders. If the target image is a greyscale foreground image with sharp transition to white background, add a bit of trimming loss: alpha > 0 until the margins look clean. Adding too much alpha will result in an over-exposed look. 
       </p>
-      <p><b>Lean on the trimming term for edges and for black-and-white sources.</b> Line art,
+      <p><b>Lean on the trimming term for edges and for black-and-white targets.</b> Line art,
       logos, hard-thresholded frames, anything where the image is almost entirely black on white, or just the line-art: there is
       no gradient for SSIM to match, and what you care about is that the shape reads and the
       background stays empty. Alpha up to 0.8-0.9 are reasonable.</p>
