@@ -97,6 +97,10 @@ h1 { margin: 0; font-size: clamp(24px, 3vw, 33px); line-height: 1.12; font-weigh
   cursor: grab; touch-action: none;
 }
 .stage.dragging { cursor: grabbing; }
+/* Panels that size themselves to their image: full panel width, height from the
+   image's own aspect ratio (set inline when the image loads), so a tall subject
+   gets a tall panel instead of shrinking inside a fixed-height box. */
+.stage.fit { height: auto; min-height: 60px; }
 .stage canvas {
   display: block; max-width: 100%; max-height: 100%; width: auto; height: auto;
   transform-origin: center center;
@@ -197,8 +201,8 @@ button:focus-visible, .filebtn:focus-visible, select:focus-visible, input:focus-
   font-size: 14.5px; color: var(--muted);
 }
 .prose code { font-family: var(--mono); font-size: 0.87em; color: var(--accent); }
-/* before/after pairs: each row is one subject, target on the left, ASCII on the right */
-.gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* one wipe panel per subject: the target left of the divider, the ASCII right of it */
+.gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: start; }
 @media (max-width: 760px) { .gallery { grid-template-columns: 1fr; } }
 .gallery figure, .pair figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .gallery img, .pair img {
@@ -296,19 +300,28 @@ figcaption.sm {
       Based on this paper <a href="https://doi.org/10.1111/cgf.12597">Fast Rendering of Image Mosaics and ASCII
       Art</a> we use SSIM, a structural similarity score, to measure how close the ASCII rendition is to the target image. Maximizing SSIM therefore means the ASCII image is close to the target image. For simplicity, glyph selection is performed independently for every 15x7 patch of the image. For each patch, we iterate through all glyphs in the glyphset, usually ~100 characters, and select the one with the best SSIM score. This similarity scoring approach works well for greyscale images and results in ASCII that approximates gradient like features. Here's some results using just the SSIM scoring method. </p>
       <div class="gallery">
-        <figure><img id="galb0" alt="A cabbage, the target image">
-          <figcaption class="sm">cabbage &middot; target</figcaption></figure>
-        <figure><img id="gal0" alt="A cabbage in ASCII">
-          <figcaption class="sm">cabbage &middot; alpha 0</figcaption></figure>
-        <figure><img id="galb1" alt="The Laoco&ouml;n group, the target image">
-          <figcaption class="sm">laocoon &middot; target</figcaption></figure>
-        <figure><img id="gal1" alt="The Laoco&ouml;n group in ASCII">
-          <figcaption class="sm">laocoon &middot; alpha 0</figcaption></figure>
-        <figure><img id="galb2" alt="Michelangelo's Piet&agrave;, the target image">
-          <figcaption class="sm">pieta &middot; target</figcaption></figure>
-        <figure><img id="gal2" alt="Michelangelo's Piet&agrave; in ASCII">
-          <figcaption class="sm">pieta &middot; alpha 0</figcaption></figure>
+        <figure>
+          <div class="stage fit" id="stGal0" aria-label="A cabbage: target versus ASCII wipe"><canvas id="cvGal0"></canvas>
+            <div class="bounds" id="bGal0"></div><div class="wipe" id="wGal0"></div>
+            <span class="zoomtag" id="zGal0">100%</span></div>
+          <figcaption class="sm">cabbage &middot; target &harr; alpha 0</figcaption>
+        </figure>
+        <figure>
+          <div class="stage fit" id="stGal1" aria-label="The Laoco&ouml;n group: target versus ASCII wipe"><canvas id="cvGal1"></canvas>
+            <div class="bounds" id="bGal1"></div><div class="wipe" id="wGal1"></div>
+            <span class="zoomtag" id="zGal1">100%</span></div>
+          <figcaption class="sm">laocoon &middot; target &harr; alpha 0</figcaption>
+        </figure>
+        <figure>
+          <div class="stage fit" id="stGal2" aria-label="Michelangelo's Piet&agrave;: target versus ASCII wipe"><canvas id="cvGal2"></canvas>
+            <div class="bounds" id="bGal2"></div><div class="wipe" id="wGal2"></div>
+            <span class="zoomtag" id="zGal2">100%</span></div>
+          <figcaption class="sm">pieta &middot; target &harr; alpha 0</figcaption>
+        </figure>
       </div>
+      <p class="note">Move the mouse across a panel to sweep the divider: the target image to
+      its left, the ASCII render to its right. Scroll to zoom, drag to pan, double-click to
+      reset.</p>
     </section>
 
     <section>
@@ -327,12 +340,12 @@ figcaption.sm {
         <div class="panels">
           <div>
             <div class="flip head"><span>target image</span><b id="cmpDimsA">&mdash;</b></div>
-            <div class="stage" id="stCmpA"><canvas id="cvCmpA"></canvas>
+            <div class="stage fit" id="stCmpA"><canvas id="cvCmpA"></canvas>
               <div class="bounds" id="bCmpA"></div><span class="zoomtag" id="zCmpA">100%</span></div>
           </div>
           <div>
             <div class="flip head"><span><span class="t-ssim">&larr; alpha 0</span> &mdash; move mouse &mdash; <span class="t-trim">alpha 0.15 &rarr;</span></span><b id="cmpDimsB">&mdash;</b></div>
-            <div class="stage" id="stCmpB"><canvas id="cvCmpB"></canvas>
+            <div class="stage fit" id="stCmpB"><canvas id="cvCmpB"></canvas>
               <div class="bounds" id="bCmpB"></div>
               <div class="wipe" id="wipeLine"></div>
               <span class="zoomtag" id="zCmpB">100%</span></div>
@@ -823,7 +836,7 @@ function syncCharsetUI() {
 // ---- zoom and pan, per panel ----
 // At rest the canvas is CSS-fitted inside its box, so scale 1 always shows the
 // whole image; zoom multiplies from there and keeps the point under the cursor.
-function attachZoom(stageId, canvas, tagId, boundsId) {
+function attachZoom(stageId, canvas, tagId, boundsId, fill) {
   const stage = el(stageId), tag = el(tagId), bounds = el(boundsId);
   const view = { k: 1, x: 0, y: 0 };
 
@@ -831,9 +844,13 @@ function attachZoom(stageId, canvas, tagId, boundsId) {
   // canvas's own pixel dimensions rather than read from clientWidth, because
   // that is rounded to whole pixels and the zoom multiplies the error -- at 15x
   // a half-pixel of rounding became several pixels of slack in the pan clamp.
+  // A `fill` panel sizes its box to the image's aspect ratio, so at rest the
+  // image should cover it exactly -- upscaling past 100% if the box is wider
+  // than the image's own pixels. The others never upscale at rest.
   function fitted() {
     const bw = stage.clientWidth, bh = stage.clientHeight;
-    const f = Math.min(1, bw / canvas.width, bh / canvas.height);
+    let f = Math.min(bw / canvas.width, bh / canvas.height);
+    if (!fill) f = Math.min(1, f);
     return { w: canvas.width * f, h: canvas.height * f, bw, bh };
   }
 
@@ -999,37 +1016,70 @@ el('pick').addEventListener('change', async () => {
   syncNotes(); recompute();
 });
 
-// The comparison panels reuse the converter's zoom/pan by drawing into canvases.
-// Left panel is the original target; right panel is a wipe between the two
-// renders: alpha 0 left of the divider, alpha 0.15 right of it. The divider is
-// stored as a fraction of image width, so it stays put in image space while the
-// panel zooms and pans.
+// A wipe panel: two images on one canvas with a mouse-swept vertical divider,
+// the first image drawn left of it and the second right of it. Zoom and pan
+// come from attachZoom; the divider is stored as a fraction of image width, so
+// it stays put in image space while the view moves. The stage takes the image's
+// aspect ratio, so a tall subject gets a tall panel instead of shrinking inside
+// a fixed-height box. The divider's own listeners are registered after
+// attachZoom's, so by the time it repositions, the zoom for the same event has
+// already applied. While dragging, the mouse is panning, not sweeping.
+function attachWipe(stageId, canvasId, tagId, boundsId, lineId) {
+  const stage = el(stageId), canvas = el(canvasId),
+        bounds = el(boundsId), line = el(lineId);
+  const zoom = attachZoom(stageId, canvas, tagId, boundsId, true);
+  let imgs = null, frac = 0.5;
+
+  // The second image sets the canvas size; the first is drawn stretched to it.
+  // The pairs here differ by at most a center-crop, so the stretch is slight.
+  function draw() {
+    if (!imgs) return;
+    const [a, b] = imgs;
+    canvas.width = b.naturalWidth; canvas.height = b.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(a, 0, 0, canvas.width, canvas.height);
+    const sx = Math.round(frac * canvas.width);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(sx, 0, canvas.width - sx, canvas.height);
+    ctx.clip();
+    ctx.drawImage(b, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+  // The bounds outline already tracks exactly where the image sits in the
+  // stage, zoom and pan included, so the divider is placed from its geometry.
+  function position() {
+    line.style.left = (bounds.offsetLeft + frac * bounds.offsetWidth - 1) + 'px';
+    line.style.top = bounds.offsetTop + 'px';
+    line.style.height = bounds.offsetHeight + 'px';
+  }
+  stage.addEventListener('pointermove', (e) => {
+    if (!stage.classList.contains('dragging') && bounds.offsetWidth > 0) {
+      const r = stage.getBoundingClientRect();
+      frac = Math.min(1, Math.max(0, (e.clientX - r.left - bounds.offsetLeft) / bounds.offsetWidth));
+      draw();
+    }
+    position();
+  });
+  stage.addEventListener('wheel', position);
+  stage.addEventListener('dblclick', position);
+  window.addEventListener('resize', position);
+
+  return {
+    set(a, b) {
+      imgs = [a, b];
+      stage.style.aspectRatio = b.naturalWidth + ' / ' + b.naturalHeight;
+      draw();
+      zoom.reset();
+      position();
+    },
+  };
+}
+
+// The comparison: the original target on the left, and on the right one wipe
+// between the two renders, alpha 0 left of the divider, alpha 0.15 right of it.
 const cmpCache = new Map();
-let wipeImgs = null, wipeFrac = 0.5;
-
-function drawWipe() {
-  if (!wipeImgs) return;
-  const [a, b] = wipeImgs;
-  cvCmpB.width = a.naturalWidth; cvCmpB.height = a.naturalHeight;
-  const ctx = cvCmpB.getContext('2d');
-  ctx.drawImage(a, 0, 0);
-  const sx = Math.round(wipeFrac * cvCmpB.width);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(sx, 0, cvCmpB.width - sx, cvCmpB.height);
-  ctx.clip();
-  ctx.drawImage(b, 0, 0);
-  ctx.restore();
-}
-
-// The bounds outline already tracks exactly where the image sits in the stage,
-// zoom and pan included, so the divider line is placed from its geometry.
-function positionWipe() {
-  const b = el('bCmpB'), line = el('wipeLine');
-  line.style.left = (b.offsetLeft + wipeFrac * b.offsetWidth - 1) + 'px';
-  line.style.top = b.offsetTop + 'px';
-  line.style.height = b.offsetHeight + 'px';
-}
+let cmpWipe = null;
 
 async function cmpLoad(src) {
   if (!cmpCache.has(src)) cmpCache.set(src, await loadImage(src));
@@ -1043,12 +1093,11 @@ async function cmpDraw(i) {
     [meta(e.name).colour, e.a0, e.a15].map(cmpLoad));
   cvCmpA.width = target.naturalWidth; cvCmpA.height = target.naturalHeight;
   cvCmpA.getContext('2d').drawImage(target, 0, 0);
+  el('stCmpA').style.aspectRatio = target.naturalWidth + ' / ' + target.naturalHeight;
   el('cmpDimsA').textContent = target.naturalWidth + '×' + target.naturalHeight;
-  wipeImgs = [a0, a15];
-  drawWipe();
   el('cmpDimsB').textContent = a0.naturalWidth + '×' + a0.naturalHeight;
   cmpZooms.forEach(z => z.reset());
-  positionWipe();
+  cmpWipe.set(a0, a15);
 }
 
 const cmpZooms = [];
@@ -1083,13 +1132,16 @@ const cmpZooms = [];
   syncAlphaUI(); syncCharsetUI(); syncNotes(); recompute();
 
   // the write-up's gallery reuses the bundled targets and comparison images, so
-  // nothing is embedded twice: before is the subject's colour asset, after is a0
+  // nothing is embedded twice: each subject is one wipe between its colour
+  // asset and its alpha-0 render
   const galSubjects = ['cabbage', 'laocoon', 'pieta'];
   for (let g = 0; g < galSubjects.length; g++) {
-    const m = meta(galSubjects[g]);
-    const e = COMPARE.find(c => c.name === galSubjects[g]);
-    if (m) el('galb' + g).src = m.colour;
-    if (e) el('gal' + g).src = e.a0;
+    const name = galSubjects[g];
+    const wipe = attachWipe('stGal' + g, 'cvGal' + g, 'zGal' + g, 'bGal' + g, 'wGal' + g);
+    const e = COMPARE.find(c => c.name === name);
+    if (!e) continue;
+    Promise.all([cmpLoad(meta(name).colour), cmpLoad(e.a0)])
+      .then(([t, a]) => wipe.set(t, a));
   }
 
   const pickEl = el('cmpPick'), ticks = el('cmpTicks');
@@ -1099,25 +1151,8 @@ const cmpZooms = [];
     o.value = String(i); o.label = COMPARE[i].name;
     ticks.appendChild(o);
   }
-  cmpZooms.push(attachZoom('stCmpA', cvCmpA, 'zCmpA', 'bCmpA'));
-  cmpZooms.push(attachZoom('stCmpB', cvCmpB, 'zCmpB', 'bCmpB'));
-
-  // Wipe wiring, registered after attachZoom's listeners so that by the time the
-  // divider repositions, the zoom/pan for the same event has already applied.
-  // While dragging, the mouse is panning, not sweeping, so the fraction holds.
-  const stB = el('stCmpB');
-  stB.addEventListener('pointermove', (e) => {
-    const b = el('bCmpB');
-    if (!stB.classList.contains('dragging') && b.offsetWidth > 0) {
-      const r = stB.getBoundingClientRect();
-      wipeFrac = Math.min(1, Math.max(0, (e.clientX - r.left - b.offsetLeft) / b.offsetWidth));
-      drawWipe();
-    }
-    positionWipe();
-  });
-  stB.addEventListener('wheel', positionWipe);
-  stB.addEventListener('dblclick', positionWipe);
-  window.addEventListener('resize', positionWipe);
+  cmpZooms.push(attachZoom('stCmpA', cvCmpA, 'zCmpA', 'bCmpA', true));
+  cmpWipe = attachWipe('stCmpB', 'cvCmpB', 'zCmpB', 'bCmpB', 'wipeLine');
 
   pickEl.addEventListener('input', () => cmpDraw(+pickEl.value));
   await cmpDraw(0);
