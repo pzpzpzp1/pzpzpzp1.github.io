@@ -331,16 +331,15 @@ figcaption.sm {
 
     <section>
       <h2>Replacing the fuzz with an illusory boundary</h2>
-      <p>The results look ok, but clearly there are undesirable artifacts. There's ASCII <b>fuzz</b>: characters bleeding into the background. SSIM scoring doesn't handle this kind of complete transition to white background well. The result is that sharp boundaries become fuzzy/noisy. Unfortunately, these are very salient to human perception so we try to address it with an additional scoring term. 
+      <p>The results look OK, but there's clearly undesirable artifacts. There's ASCII <b>fuzz</b>: characters bleeding into the background. SSIM scoring doesn't handle complete transition to white background well. The result is that sharp boundaries become fuzzy/noisy. Unfortunately, these are very salient to human perception so we try to address it with an additional scoring term. 
       </p>
       <p> 
       To motivate the additional scoring term, note that human vision is remarkably good at
-      <b>filling in</b> what's missing. Gaps in the contour can be closed by the human brain. This is the phenomenon responsible for all sorts of visual illusions. See: <a href="https://en.wikipedia.org/wiki/Illusory_contour">illusory contours</a>.
-      On the other hand, it's much harder to <em>unsee</em>
-      structure that is there. A stray character in the margin is therefore far worse
-      than choosing a character that covers less than it could. So if we want to perceive clean boundaries, we should bias the scoring towards white <b>white</b>. Mathematically, this is expressed by the equation
+      filling in what's missing. Gaps in the contour can be closed by the human brain: <a href="https://en.wikipedia.org/wiki/Illusory_contour">illusory contours</a>.
+      On the other hand, it's much harder to unsee
+      a stray character in the margin. So if we want to perceive clean boundaries, we should bias the scoring towards <b>white</b>. Mathematically, this is expressed by the equation
       <p><code>trimming = 1 &minus; stray ink / N</code></p>
-      <p>This penalizes over-painting. Glyphs are told explicitly it's worse to put black pixels where the target image is white. Asymmetrically, it is not as penalized to put white pixels where it should be black. We blend a small amount of this penalty with SSIM scoring depicted by the alpha slider. Even a slight amount of this penalty cleans up the boundary.</p>
+      <p>This penalizes over-painting. Glyphs are told explicitly it's worse to put black pixels where the target image is white. Asymmetrically, it is somewhat ok to put white pixels where it should be black. We blend a small amount of this penalty with SSIM scoring depicted by the alpha slider. Even a slight amount of this penalty cleans up the boundary.</p>
       <div class="cmp">
         <div class="flip">
           <div class="head"><span>subject</span><b id="cmpName">&mdash;</b></div>
@@ -348,10 +347,7 @@ figcaption.sm {
                  aria-label="comparison subject">
           <datalist id="cmpTicks"></datalist>
         </div>
-        <p class="note">Move the mouse across the right panel to sweep the divider: alpha 0 to
-        its left, alpha 0.15 to its right. Scroll to zoom either panel, drag to pan,
-        double-click to reset. Zoom in on a boundary and the difference is obvious: pure SSIM
-        scatters characters into blank paper, the trimming term does not.</p>
+        <p class="note">slider chooses different target images</p>
         <div class="panels">
           <div>
             <div class="flip head"><span>target image</span><b id="cmpDimsA">&mdash;</b></div>
@@ -397,7 +393,7 @@ figcaption.sm {
     </section>
 
     <section>
-      <h2>Do what you want with it</h2>
+      <h2>Do whatever you want</h2>
       <p>The ASCII converter runs in this one frontend-only html file. Meaning there's no secrets about how the algorithm works. Feel free to modify it how you like. Maybe we'll get more interesting ASCII styles that way.</p>
     </section>
   </div>
