@@ -8,7 +8,7 @@
 <!-- Versioned so a stale copy in someone's cache cannot be reused after a change.
      serve.py sends no-store, but a browser that cached these before it existed will
      not ask again on its own. -->
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -36,6 +36,7 @@
     <button id="back" disabled>&laquo; 1</button>
     <button id="fwd" disabled>1 &raquo;</button>
     <button id="copy" disabled title="Copy this frame's text">Copy frame</button>
+    <button id="selectText" disabled title="Open this frame as selectable text">Select text</button>
     <label class="check"><input type="checkbox" id="loop" checked> loop</label>
     <span class="spacer"></span>
     <label class="check" for="veilOpacity">center-crop veil</label>
@@ -61,6 +62,18 @@
   </div>
 </footer>
 
-<script src="app.js?v=6"></script>
+<!-- The current frame as real text. The video's glyphs are svg text, which no
+     mobile browser lets you drag-select; this overlay is plain HTML text, so
+     native selection works on it everywhere. -->
+<div class="textview" id="textview" hidden>
+  <div class="textview-head">
+    <span id="tvLabel"></span>
+    <span class="spacer"></span>
+    <button id="tvClose">Close</button>
+  </div>
+  <pre id="tvPre"></pre>
+</div>
+
+<script src="app.js?v=7"></script>
 </body>
 </html>

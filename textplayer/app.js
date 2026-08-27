@@ -333,7 +333,7 @@ async function init() {
     N = index();
 
     $('seek').max = String(N - 1);
-    for (const id of ['play', 'back', 'fwd', 'copy']) $(id).disabled = false;
+    for (const id of ['play', 'back', 'fwd', 'copy', 'selectText']) $(id).disabled = false;
     $('seek').disabled = false;
 
     const [lo, hi] = meta.scale_range || [0, 0];
@@ -387,6 +387,19 @@ $('copy').addEventListener('click', async () => {
 $('frame').addEventListener('contextmenu', (ev) => {
   if (matchMedia('(pointer: coarse)').matches) ev.preventDefault();
 });
+
+// The frame as real, selectable text. SVG text cannot be drag-selected on
+// mobile at all, so selection happens here instead, on an HTML copy of the
+// frame. Playback pauses: the text is a snapshot, not a live view.
+$('selectText').addEventListener('click', () => {
+  const r = record(frame);
+  if (!r) return;
+  setPlaying(false);
+  $('tvPre').textContent = r.rows.join('\n');
+  $('tvLabel').textContent = `frame ${frame} · ${r.grid[0]}x${r.grid[1]} characters · long-press or drag to select`;
+  $('textview').hidden = false;
+});
+$('tvClose').addEventListener('click', () => { $('textview').hidden = true; });
 
 // Dragging seeks without giving up playback, but the audio is held still while the
 // thumb moves: re-seeking a playing track every pointer event only makes it stutter.
@@ -442,6 +455,7 @@ document.addEventListener('keydown', (ev) => {
     case 'ArrowLeft': ev.preventDefault(); setPlaying(false); setFrame(frame - jump); break;
     case 'ArrowRight': ev.preventDefault(); setPlaying(false); setFrame(frame + jump); break;
     case 'm': $('mute').click(); break;
+    case 'Escape': $('textview').hidden = true; break;
     default: return;
   }
 });
