@@ -162,3 +162,15 @@ button.primary:hover:not(:disabled) { filter: brightness(1.07); }
   .stage { padding: 14px; }
   .readout #geom { display: none; }
 }
+
+/* On touch screens a long press on the art pops the browser's save/share
+   callout or starts a text selection, neither of which is wanted -- the Copy
+   frame button is the way to get the text out. Desktop mouse selection is
+   left alone. */
+@media (pointer: coarse) {
+  .frame, .frame * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

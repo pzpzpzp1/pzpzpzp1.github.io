@@ -8,7 +8,7 @@
 <!-- Versioned so a stale copy in someone's cache cannot be reused after a change.
      serve.py sends no-store, but a browser that cached these before it existed will
      not ask again on its own. -->
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -35,6 +35,7 @@
     <button id="play" class="primary" disabled>Play</button>
     <button id="back" disabled>&laquo; 1</button>
     <button id="fwd" disabled>1 &raquo;</button>
+    <button id="copy" disabled title="Copy this frame's text">Copy frame</button>
     <label class="check"><input type="checkbox" id="loop" checked> loop</label>
     <span class="spacer"></span>
     <label class="check" for="veilOpacity">center-crop veil</label>
@@ -60,6 +61,6 @@
   </div>
 </footer>
 
-<script src="app.js?v=4"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

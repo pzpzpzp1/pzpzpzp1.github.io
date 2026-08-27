@@ -333,7 +333,7 @@ async function init() {
     N = index();
 
     $('seek').max = String(N - 1);
-    for (const id of ['play', 'back', 'fwd']) $(id).disabled = false;
+    for (const id of ['play', 'back', 'fwd', 'copy']) $(id).disabled = false;
     $('seek').disabled = false;
 
     const [lo, hi] = meta.scale_range || [0, 0];
@@ -352,6 +352,41 @@ async function init() {
 $('play').addEventListener('click', () => setPlaying(!playing));
 $('back').addEventListener('click', () => { setPlaying(false); setFrame(frame - 1); });
 $('fwd').addEventListener('click', () => { setPlaying(false); setFrame(frame + 1); });
+
+/** The clipboard API needs a secure context and can be permission-denied;
+ *  either way, fall back to the old selection-based copy. */
+async function copyText(s) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try { await navigator.clipboard.writeText(s); return; } catch { /* fall through */ }
+  }
+  const ta = document.createElement('textarea');
+  ta.value = s;
+  ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  ta.remove();
+  if (!ok) throw new Error('copy blocked');
+}
+
+$('copy').addEventListener('click', async () => {
+  const r = record(frame);
+  if (!r) return;
+  const btn = $('copy');
+  try {
+    await copyText(r.rows.join('\n'));
+    btn.textContent = 'Copied';
+  } catch {
+    btn.textContent = 'Copy failed';
+  }
+  setTimeout(() => { btn.textContent = 'Copy frame'; }, 1200);
+});
+
+// The long-press context menu on touch screens (save/share/print) has nothing
+// useful for an inline svg; the Copy frame button covers the one real want.
+$('frame').addEventListener('contextmenu', (ev) => {
+  if (matchMedia('(pointer: coarse)').matches) ev.preventDefault();
+});
 
 // Dragging seeks without giving up playback, but the audio is held still while the
 // thumb moves: re-seeking a playing track every pointer event only makes it stutter.
