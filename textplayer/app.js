@@ -370,6 +370,17 @@ $('seek').addEventListener('pointerup', endScrub);
 $('seek').addEventListener('pointercancel', endScrub);
 $('seek').addEventListener('change', endScrub);
 
+// The frame must stay 4:3: the svg is stretched to it (preserveAspectRatio is
+// none), so any deviation distorts the art. The CSS height:100% sizing breaks
+// on narrow screens -- max-width clamps the width while the height stays full --
+// so the frame is sized here to the largest 4:3 rect the stage can hold.
+new ResizeObserver((entries) => {
+  const r = entries[0].contentRect;
+  const w = Math.min(r.width, r.height * 4 / 3);
+  $('frame').style.width = w + 'px';
+  $('frame').style.height = (w * 3 / 4) + 'px';
+}).observe(document.querySelector('.stage'));
+
 // The veil's overhang is specified in screen pixels, so it has to be recomputed
 // whenever the box changes size.
 new ResizeObserver((entries) => {
