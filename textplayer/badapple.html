@@ -4,6 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bad Apple - ASCII</title>
+
+<!-- The link-preview card. Twitter/X only ever shows a static image (and caps
+     it at 5MB), so it gets a good frame as a PNG; og:image is a downsized
+     animated cut of the projects-page gif, which Discord and Telegram animate.
+     Absolute URLs: scrapers do not resolve relative ones. -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Bad Apple - ASCII">
+<meta property="og:description" content="The Bad Apple music video converted to ASCII text, played frame-by-frame in the browser. Every frame is selectable text.">
+<meta property="og:url" content="https://pzpzpzp1.github.io/textplayer/badapple.html">
+<meta property="og:image" content="https://pzpzpzp1.github.io/assets/textplayer_embed.gif">
+<meta property="og:image:type" content="image/gif">
+<meta property="og:image:width" content="480">
+<meta property="og:image:height" content="357">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Bad Apple - ASCII">
+<meta name="twitter:description" content="The Bad Apple music video converted to ASCII text, played frame-by-frame in the browser.">
+<meta name="twitter:image" content="https://pzpzpzp1.github.io/assets/textplayer_card.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e1013'/%3E%3Ctext x='8' y='12' font-family='monospace' font-size='12' fill='%23ffb454' text-anchor='middle'%3E%24%3C/text%3E%3C/svg%3E">
 <!-- Versioned so a stale copy in someone's cache cannot be reused after a change.
      serve.py sends no-store, but a browser that cached these before it existed will
